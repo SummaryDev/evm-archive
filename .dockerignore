@@ -1,0 +1,4 @@
+data
+*parquet
+*.env
+env.sh

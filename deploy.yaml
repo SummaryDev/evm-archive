@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evm-archive-${evm_chain}-${evm_network}${evm_shard}
+spec:
+  selector:
+    matchLabels:
+      app: evm-archive-${evm_chain}-${evm_network}${evm_shard}
+  template:
+    metadata:
+      labels:
+        app: evm-archive-${evm_chain}-${evm_network}${evm_shard}
+    spec:
+      containers:
+      - name: evm-archive
+        image: "${image_evm_archive}"
+        env:
+        - name: PGPASSWORD
+          value: "${db_password_evm_archive}"
+        - name: PGHOST
+          value: "${db_host}"
+        - name: PGDATABASE
+          value: "${namespace}"
+        - name: evm_ARCHIVE_SCHEMA
+          value: "${evm_chain}_${evm_network}${evm_shard}"
+        - name: PGUSER
+          value: "evm_archive"
+        - name: evm_ARCHIVE_ENDPOINT
+          value: "https://${evm_chain}.api.onfinality.io/public"
+#          value: "http://${evm_network}:9000"
+#        resources:
+#          limits:
+#            memory: "1024Mi"
+##            cpu: "1000m"
+#          requests:
+#            memory: "200Mi"
+##            cpu: "100m"
+
