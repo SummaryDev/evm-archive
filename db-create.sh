@@ -5,7 +5,7 @@
 
 export evm_network=${evm_network-mainnet}
 
-source ../infra/env.sh
+# source ../infra/env.sh
 
 env | grep '^db' | sort
 

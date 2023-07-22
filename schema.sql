@@ -24,8 +24,9 @@ create table if not exists Log
   logIndex            text,
   transactionLogIndex text,
   removed             boolean,
-  primary key (blockNumber, transactionHash, logIndex)
+  primary key (blockHash, transactionHash, logIndex)
 );
+
 create index on Log (address);
 create index on Log (topic0);
 create index on Log (topic1);
@@ -33,6 +34,8 @@ create index on Log (topic2);
 create index on Log (topic3);
 create index on Log (address, topic0);
 create index on Log (transactionHash);
+create index on Log (blockHash);
+create index on Log (blockNumber);
 
 comment on table Log
 is 'evmEvent';
