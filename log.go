@@ -56,8 +56,7 @@ create table if not exists Log
 	logIndex            text,
 	transactionLogIndex text,
 	removed             boolean,
-	primary key (blockNumber, transactionHash, logIndex)
-
+	primary key (blockHash, transactionHash, logIndex)
 );
 */
 
@@ -128,11 +127,17 @@ func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *Ge
 
 type GetLogsResponse []LogRpc
 
+func (t *GetLogsResponse) Len() int {
+	logs := *t
+
+	return len(logs)
+}
+
 func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 	logs := *t
 
 	if len(logs) == 0 {
-		log.Println("no logs found")
+		log.Println("no logs in the response")
 		return
 	}
 
@@ -145,28 +150,28 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 
 	db, err := sqlx.Open("pgx", dataSourceName) // postgres
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("sqlx.Open %v", err)
 	}
 
 	insertQuery := "insert into log (address, topic0, topic1, topic2, topic3, data, blockHash, blockNumber, transactionHash, transactionIndex, logIndex, transactionLogIndex, removed) " +
 		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :transactionlogindex, :removed) " +
-		"on conflict on constraint log_pkey do nothing" // todo on conflict on constraint Log_pkey update
+		"on conflict on constraint log_pkey do nothing" //todo on conflict on constraint log_pkey update
 
 	result, err := db.NamedExec(insertQuery, logsDb)
 	if err != nil {
-		log.Fatalf("%w", err)
+		log.Fatalf("db.NamedExec %v", err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("result.RowsAffected %v", err)
 	}
 
-	log.Printf("inserted %v rows out of %v data", rows, len(logsDb))
+	log.Printf("inserted %v rows out of %v records", rows, len(logsDb))
 
 	err = db.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("db.Close %v", err)
 	}
 
 	countSaved = rows

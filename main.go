@@ -58,7 +58,7 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 			panic(err)
 		}
 	} else {
-		blockStep = 1000
+		blockStep = 100
 	}
 
 	sleepSecondsString := os.Getenv("EVM_ARCHIVE_SLEEP_SECONDS")
@@ -79,6 +79,7 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 
 	client := rpc.NewClient(endpoint)
 
+	// keep retrying to overcome recoverable comm errors
 	failed := true
 
 	for failed {
@@ -105,13 +106,12 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 			default:
 				log.Printf("retrying immediately after Call failed with err=%v\n", err)
 			}
-
 		} else if response == nil {
 			failed = true
-			log.Printf("retrying immediately after Call failed with response=%v\n", response)
+			log.Println("retrying immediately after Call failed with nil response")
 		} else if response.Error != nil {
 			failed = true
-			log.Printf("retrying immediately after Call failed with %v\n", response.Error)
+			log.Printf("retrying immediately after Call failed with response.Error %v\n", response.Error)
 		} else {
 			failed = false
 
@@ -121,6 +121,8 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 			if err != nil {
 				log.Fatalf("cannot GetObject for GetLogsResponse %v\n", err)
 			}
+
+			log.Printf("responded with %v records", getLogsResponse.Len())
 
 			getLogsResponse.Save(dataSourceName)
 		}
@@ -136,17 +138,19 @@ func main() {
 	var q *GetLogsRequest
 
 	if fromBlock > 0 {
+		// query starting from fromBlock to infinity or to toBlock if it's specified properly
 		if toBlock < fromBlock {
 			toBlock = maxUint
 		}
 
-		log.Printf("repeating query for logs in each block from %v to %v", fromBlock, toBlock)
+		log.Printf("repeating query for logs in %v blocks from %v to %v", blockStep, fromBlock, toBlock)
 
 		for blockNumber := fromBlock; blockNumber <= toBlock; blockNumber += blockStep + 1 {
 			q = NewGetLogsRequest(contracts, blockNumber, blockNumber+blockStep)
 			query(endpoint, dataSourceName, q)
 		}
 	} else {
+		// query indefinitely for the latest block if fromBlock not specified
 		for {
 			log.Printf("repeating query for logs in the latest block with sleep %v in between", sleep)
 
