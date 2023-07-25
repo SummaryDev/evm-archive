@@ -37,12 +37,8 @@ create index on Log (transactionHash);
 create index on Log (blockHash);
 create index on Log (blockNumber);
 
-comment on table Log
-is 'evmEvent';
-
-comment on column Log.address
-is 'Address of the smart contract emitting the event';
-comment on column Log.topic0
-is 'Hash of the event name';
+comment on table Log is 'Event emitted by a smart contract'
+comment on column Log.address is 'Address of the smart contract emitting the event';
+comment on column Log.topic0 is 'Hash of the event name';
 
 

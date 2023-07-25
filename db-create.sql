@@ -14,3 +14,9 @@ grant select, update, usage on all sequences in schema ${evm_chain}_${evm_networ
 grant usage on schema ${evm_chain}_${evm_network}${evm_shard} to redash_evm, hasura, metabase, superset, graphile;
 
 grant select on all tables in schema ${evm_chain}_${evm_network}${evm_shard} to redash_evm, hasura, metabase, superset, graphile;
+
+grant usage on schema event to redash_evm, hasura, metabase, superset, graphile;
+grant select on all tables in schema event to redash_evm, hasura, metabase, superset, graphile;
+
+grant usage on schema beamswap to redash_evm, hasura, metabase, superset, graphile;
+grant select on all tables in schema beamswap to redash_evm, hasura, metabase, superset, graphile;
