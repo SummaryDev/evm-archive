@@ -121,7 +121,7 @@ func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *Ge
 	if toBlock >= fromBlock {
 		q.Filter.ToBlock = toBlock
 	}
-	log.Println(q.ToJson())
+	//log.Println(q.ToJson())
 	return q
 }
 
@@ -153,9 +153,9 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 		log.Fatalf("sqlx.Open %v", err)
 	}
 
-	insertQuery := "insert into log (address, topic0, topic1, topic2, topic3, data, blockHash, blockNumber, transactionHash, transactionIndex, logIndex, transactionLogIndex, removed) " +
+	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, blockHash, blockNumber, transactionHash, transactionIndex, logIndex, transactionLogIndex, removed) " +
 		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :transactionlogindex, :removed) " +
-		"on conflict on constraint log_pkey do nothing" //todo on conflict on constraint log_pkey update
+		"on conflict on constraint logs_pkey do nothing" //todo on conflict on constraint logs_pkey update
 
 	result, err := db.NamedExec(insertQuery, logsDb)
 	if err != nil {
