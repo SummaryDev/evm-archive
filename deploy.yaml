@@ -21,7 +21,7 @@ spec:
           value: "${db_host}"
         - name: PGDATABASE
           value: "${namespace}"
-        - name: evm_ARCHIVE_SCHEMA
+        - name: EVM_ARCHIVE_SCHEMA
           value: "${evm_chain}_${evm_network}${evm_shard}"
         - name: PGUSER
           value: "evm_archive"

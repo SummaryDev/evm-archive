@@ -7,25 +7,6 @@ import (
 	"log"
 )
 
-/*
-	{
-	  "address": "0x985bca32293a7a496300a48081947321177a86fd",
-	  "topics": [
-		"0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9",
-		"0x00000000000000000000000027e4ecf13634f28588e00059594df8465e3b32e9",
-		"0x000000000000000000000000acc15dc74880c9944775448304b263d191c6077f"
-	  ],
-	  "data": "0x0000000000000000000000004293fb54fca9e1490ac4675e0a1a35f97c4ee06800000000000000000000000000000000000000000000000000000000000000a1",
-	  "blockHash": "0x14c58621a13d5ede27e71fa5f338a485d76c1557402a4255953a9b293f21e26f",
-	  "blockNumber": "0x3d2e29",
-	  "transactionHash": "0x75a22452f56b0d69834374817fc222d072108d8bf1475e2562181e18dd5d9c30",
-	  "transactionIndex": "0x5",
-	  "logIndex": "0x2f",
-	  "transactionLogIndex": "0x0",
-	  "removed": false
-	}
-*/
-
 type LogRpc struct {
 	Address             string    `json:"address"`
 	Topics              [4]string `json:"topics"`
@@ -38,27 +19,6 @@ type LogRpc struct {
 	TransactionLogIndex string    `json:"transactionLogIndex"`
 	Removed             bool      `json:"removed"`
 }
-
-/*
-create table if not exists Log
-(
-
-	address             text,
-	topic0              text,
-	topic1              text,
-	topic2              text,
-	topic3              text,
-	data                text,
-	blockHash           text,
-	blockNumber         text,
-	transactionHash     text,
-	transactionIndex    text,
-	logIndex            text,
-	transactionLogIndex text,
-	removed             boolean,
-	primary key (blockHash, transactionHash, logIndex)
-);
-*/
 
 type LogDb struct {
 	Address             string
@@ -153,7 +113,7 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 		log.Fatalf("sqlx.Open %v", err)
 	}
 
-	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, blockHash, blockNumber, transactionHash, transactionIndex, logIndex, transactionLogIndex, removed) " +
+	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, block_hash, block_number, transaction_hash, transaction_index, log_index, transaction_log_index, removed) " +
 		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :transactionlogindex, :removed) " +
 		"on conflict on constraint logs_pkey do nothing" //todo on conflict on constraint logs_pkey update
 

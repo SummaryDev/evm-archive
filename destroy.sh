@@ -10,8 +10,4 @@ function fun() {
     kubectl --namespace ${namespace} delete deployment evm-archive-${evm_chain}-${evm_network}${evm_shard}
 }
 
-#fun devnet
-
-#fun testnet
-
 fun moonbeam mainnet

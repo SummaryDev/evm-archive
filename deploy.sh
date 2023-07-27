@@ -6,7 +6,6 @@ function fun {
     evm_chain=$1
     evm_network=$2
     evm_shard=$3
-    evm_cursor=$4
 
     ./db-create.sh
 
@@ -15,7 +14,6 @@ function fun {
     sed 's/${evm_chain}/evm_network/g' | sed "s/evm_chain/$evm_chain/g" | \
     sed 's/${evm_network}/evm_network/g' | sed "s/evm_network/$evm_network/g" | \
     sed 's/${evm_shard}/evm_shard/g' | sed "s/evm_shard/$evm_shard/g" | \
-    sed 's/${evm_cursor}/evm_cursor/g' | sed "s/evm_cursor/$evm_cursor/g" | \
     sed 's/${image_evm_archive}/image_evm_archive/g' | sed "s@image_evm_archive@${image_evm_archive}@g" |\
     sed 's/${db_password_evm_archive}/db_password_evm_archive/g' | sed "s/db_password_evm_archive/$db_password_evm_archive/g" | \
     sed 's/${db_host}/db_host/g' | sed "s/db_host/$db_host/g" | \
@@ -24,4 +22,4 @@ function fun {
 #    --dry-run=client
 }
 
-fun moonriver mainnet
+fun moonbeam mainnet

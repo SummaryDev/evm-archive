@@ -1,4 +1,4 @@
 data
 *parquet
-*.env
-env.sh
+.env
+evm-archive

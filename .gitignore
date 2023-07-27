@@ -2,7 +2,7 @@ docs/*.pdf
 .env
 env.sh
 data
-ethereum-archive
+evm-archive
 *.parquet
 *.csv
 scratch.txt
