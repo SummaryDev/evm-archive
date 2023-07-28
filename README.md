@@ -130,7 +130,7 @@ You can get to this row of a decoded `Transfer` event:
 With a SQL select like:
 
 ```sql
-select to_address(2,topic1) "from",to_address(2,topic2) "to",to_uint256(2,data) "value", address contract_address from data.logs where topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+select to_address(topic1) "from",to_address(topic2) "to",to_uint256(data) "value", address contract_address from data.logs where topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 ```
 
 
