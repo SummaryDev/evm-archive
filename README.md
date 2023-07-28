@@ -48,18 +48,15 @@ logs into readable events: `event.Transfer_address_from_address_to_uint256_value
 schema `event` together with other logs we can decode.
 
 Other views that decode contract events are grouped into schemas representing labels like project
-names or standards
-(aave, beamswap, erc20) like `beamswap.GlintTokenV1_evt_Transfer`.
+names or standards (aave, beamswap, erc20) like `beamswap.GlintTokenV1_evt_Transfer`.
 
 You don't have to follow this pattern and can create `logs` table in any schema in any database
 you'd like.
 Use the table's definition from [schema.sql](./schema.sql).
 
 This script [db-create.sh](./db-create.sh) will create the database using admin user `postgres`
-authenticated by
-`db_password`, and the user this app will run as: `evm_archive` authenticated
-by `db_password_evm_archive`. Make sure postgres client
-`psql` is installed on your local machine.
+authenticated by `db_password`, and the user this app will connect as: `evm_archive` authenticated
+by `db_password_evm_archive`. Make sure Postgres client `psql` is installed on your local machine.
 
 ```shell
 db_host=db-postgresql.local db_password=postgres123 db_password_evm_archive=evm_archive123 \
@@ -118,26 +115,24 @@ Set these parameters from an [env](./example.env) file and run.
 ## Why we store raw logs
 
 The raw event log data is hard to analyze. It needs to be decoded so its numeric values can be used
-in
-calculations and its hex values be seen as text and addresses.
+in calculations and its hex values be seen as text and addresses.
 
 The usual approach to archive onchain data is to *index* smart contracts with *subgraphs*: extract
-data of specific
-contracts, convert them on the fly by code specially written for its events, and store them decoded
-for querying.
+data of specific contracts, decode it on the fly by code specially written for its events, and
+store decoded for querying.
 
 We postpone the decoding stage to the time of the actual query: the data is stored encoded as
-received and gets decoded later. This gives us flexibility in interpreting data: the ABI for
-the contract can be corrected or obtained later. This approach does not require
+received and gets decoded later. This gives us flexibility in interpreting data: we don't have 
+to know the contract's ABI at the time of event capture. This approach does not require
 efforts to index specific contracts or write subgraph code to interpret them.
 
-For decoding we employ user defined functions within SQL select statements. We know from the  
-contract's ABI what functions (like to_uint256, to_address) to apply and what names to give to
-columns.
+For decoding we employ user defined functions within SQL select statements. Once we obtain 
+the contract's ABI we know what functions (to_uint256, to_address) to apply to raw columns and what 
+names to give to resulting columns.
 
-This turns the common ETL approach to ELT: extract, load raw, transform when reading. We extract
-logs of all contracts and load them raw to the database to be queried by functions and views
-that know how to decode them from their contracts' ABIs.
+This turns the usual ETL approach to ELT: extract, load raw, transform when reading. We extract
+logs of all contracts and load them raw into the database to be queried by functions and views
+that know how to decode them.
 
 From this row with a raw log:
 
@@ -188,5 +183,3 @@ When you know the event's ABI:
   "type": "event"
 }
 ```
-
-

@@ -20,12 +20,12 @@ spec:
         - name: PGHOST
           value: "${db_host}"
         - name: PGDATABASE
-          value: "${namespace}"
-        - name: EVM_ARCHIVE_SCHEMA
           value: "${evm_chain}_${evm_network}${evm_shard}"
+        - name: EVM_ARCHIVE_SCHEMA
+          value: data
         - name: PGUSER
           value: "evm_archive"
-        - name: evm_ARCHIVE_ENDPOINT
+        - name: EVM_ARCHIVE_ENDPOINT
           value: "https://${evm_chain}.api.onfinality.io/public"
 #          value: "http://${evm_network}:9000"
 #        resources:
