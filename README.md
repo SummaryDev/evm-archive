@@ -31,7 +31,7 @@ From this response from a blockchain node (try it with [curl_get_logs.sh](./curl
 }
 ```
 
-To this row:
+We store this row:
 
 |address|topic0                       |topic1|topic2                                       |topic3|data                                                              |block_hash                                                        |block_number|transaction_hash                                                  |transaction_index|log_index| transaction_log_index |removed|block_timestamp|
 |-------|-----------------------------|------|---------------------------------------------|------|------------------------------------------------------------------|------------------------------------------------------------------|------------|------------------------------------------------------------------|---------------|---------|-------------------|-------|---------------|
@@ -42,14 +42,12 @@ To this row:
 ## Create the database
 
 We name our database by the name of the blockchain (ethereum or moonbeam), its network (mainnet 
-or goerli), and development (dev or prod) ex.: `ethereum_goerli_dev`, 
-`moonbeam_mainnet_prod`. 
+or goerli), and environment (dev or prod) like `ethereum_goerli_dev` or `moonbeam_mainnet_prod`. 
 
 The reason for a separate database and not a schema is that we use schemas to group views that decode the raw logs 
-into readable events, like `event.Transfer_address_from_address_to_uint256_value_d` is grouped into 
+into readable events: `event.Transfer_address_from_address_to_uint256_value_d` is grouped into 
 schema `event` together with other logs we can decode. Other views are grouped into schemas 
-representing labels like project names or standards (aave, beamswap, erc20) ex.:  
-`beamswap.GlintTokenV1_evt_Transfer`.
+representing labels like project names or standards (aave, beamswap, erc20) like `beamswap.GlintTokenV1_evt_Transfer`.
 
 You don't have to follow this pattern and can create `logs` table in any schema in any database you'd like.
 Use the table's definition from [schema.sql](./schema.sql).
@@ -109,11 +107,13 @@ The usual approach to archive onchain data is to *index* smart contracts with *s
 contracts, convert them on the fly by code specially written for its events, and store them decoded for querying.
 
 We postpone the decoding stage to the time of the actual query: the data is stored as received encoded and is 
-decoded later by functions within a SQL select statement. We know from the contract's ABI what function (ex. 
+decoded later by functions within a SQL select statement. We know from the contract's ABI what function (like  
 to_uint256, to_address) to apply and what name to give an attribute. This gives us flexibility in interpreting data: the ABI for 
 the contract may be obtained later or may be corrected. This approach does not require efforts to index specific 
-contracts or write subgraph or other code to interpret them. We can extract logs of all contracts and store them raw 
-in a relational database to be queried by functions and views that know how to decode them.
+contracts or write subgraph or other code to interpret them. 
+
+We can extract logs of all contracts and load them raw to the database to be queried by functions and views 
+that know how to decode them. This turns the usual ETL approach to ELT: extract, load, transform.
 
 From this row of a raw log:
 
