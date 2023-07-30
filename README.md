@@ -1,6 +1,6 @@
 # EVM Archive
 
-This is an ETL utility to archive logs emitted by smart contracts in an EVM compatible
+This is an ETL utility to archive logs emitted by smart contracts in Ethereum or another EVM compatible
 blockchain into a Postgres database.
 
 - Extracts logs from a full blockchain node by calling
