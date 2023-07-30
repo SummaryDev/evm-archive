@@ -18,15 +18,15 @@ From this response from a blockchain node (try it with [curl_get_logs.sh](./curl
   "topics": [
     "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
     "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "0x000000000000000000000000c6ca172fc8bdb803c5e12731109744fb0200587b"
+    "0x000000000000000000000000f78031c993afb43e79f017938326ff34418ec36e"
   ],
-  "data": "0x00000000000000000000000000000000000000000000000d87e55590017fffff",
+  "data": "0x000000000000000000000000000000000000000000000000aad50c474db4eb50",
   "blockHash": "0x09f1e5619fcbfaa873fcf4e924b724dac6b84e0f9c02341f75c11393d586792b",
   "blockNumber": "0x364df",
   "transactionHash": "0xf9a7cefb1ab525781aac1b0ca29bf76b90cd2f16e22ee9e91cf7d2dcae78aa08",
   "transactionIndex": "0x6",
-  "logIndex": "0x13",
-  "transactionLogIndex": "0x2",
+  "logIndex": "0x12",
+  "transactionLogIndex": "0x1",
   "removed": false
 }
 ```
@@ -183,3 +183,7 @@ When you know the event's ABI:
   "type": "event"
 }
 ```
+
+Please see our other repo
+[evm-archive](https://github.com/SummaryDev/evm-sql) for SQL functions to decode event values and 
+scripts to turn ABI files into database views.
