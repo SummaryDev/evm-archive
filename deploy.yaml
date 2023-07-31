@@ -20,7 +20,7 @@ spec:
         - name: PGHOST
           value: "${db_host}"
         - name: PGDATABASE
-          value: "${evm_chain}_${evm_network}${evm_shard}"
+          value: "${evm_chain}_${evm_network}${evm_shard}_${namespace}"
         - name: EVM_ARCHIVE_SCHEMA
           value: data
         - name: PGUSER

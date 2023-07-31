@@ -112,6 +112,27 @@ Set these parameters from an [env](./example.env) file and run.
 ./evm-archive
 ```
 
+## Build and deploy to Kubernetes
+
+Build docker image and push it to your repository on docker.io.
+
+```shell
+image_evm_archive="mydockeriousername/evm-archive:latest" ./build.sh
+```
+
+Deploy to your k8s cluster with *kubectl*. Edit [deploy.yaml](./deploy.sh) to set env variables to 
+control the logs filter like contract addresses. Script [deploy.sh](./deploy.sh) has a 
+convenient function with which you can deploy multiple  
+instances each archiving a different chain or its shard, like for 
+`ethereum-mainnet-prod`, `ethereum-mainnet-dev`, `ethereum-goerli2023-prod`, 
+`moonbeam-mainnet-dev` etc. Will first try to create the database, schema and
+tables with [db-create.sh](./db-create.sh). Docker image if not specified will default to 
+`olegabu/evm-archive:latest`.
+
+```shell
+db_host=db-postgresql.local db_password_evm_archive=evm_archive123 namespace=prod ./deploy.sh
+```
+
 ## Why we store raw logs
 
 The raw event log data is hard to analyze. It needs to be decoded so its numeric values can be used

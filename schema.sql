@@ -31,7 +31,7 @@ alter default privileges for role evm_archive in schema data grant select on tab
 
 set search_path to data;
 
-drop table if exists logs cascade;
+-- drop table if exists logs cascade;
 
 create table if not exists logs
 (
