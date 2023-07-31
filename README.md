@@ -185,5 +185,5 @@ When you know the event's ABI:
 ```
 
 Please see our other repo
-[evm-sql](https://github.com/SummaryDev/evm-sql) for SQL functions to decode event values and 
+[ethereum-sql](https://github.com/SummaryDev/ethereum-sql) for SQL functions to decode event values and 
 scripts to turn ABI files into database views.
