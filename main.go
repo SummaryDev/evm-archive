@@ -145,8 +145,8 @@ func main() {
 
 		log.Printf("repeating query for logs in %v blocks from %v to %v", blockStep, fromBlock, toBlock)
 
-		for blockNumber := fromBlock; blockNumber <= toBlock; blockNumber += blockStep + 1 {
-			q = NewGetLogsRequest(contracts, blockNumber, blockNumber+blockStep)
+		for blockNumber := fromBlock; blockNumber <= toBlock; blockNumber = blockNumber + blockStep {
+			q = NewGetLogsRequest(contracts, blockNumber, blockNumber+blockStep-1)
 			query(endpoint, dataSourceName, q)
 		}
 	} else {

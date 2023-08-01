@@ -6,8 +6,10 @@
 # namespace=dev evm_chain=ethereum evm_network=goerli ./db-create.sh
 # namespace=prod evm_chain=moonbeam evm_network=mainnet ./db-create.sh
 
-# default network to mainnet if env var is not set
+# defaults
+export evm_chain=${evm_chain-moonbeam}
 export evm_network=${evm_network-mainnet}
+export namespace=${namespace-dev}
 
 # you may already have db host and passwords in an env file:
 # source .env
@@ -26,7 +28,7 @@ env | grep '^db' | sort
 
 # as admin user postgres: create the database, user evm_archive, his grants
 
-export PGHOST=${db_host}
+export PGHOST=${db_host-"db-postgresql.default.svc.cluster.local"}
 export PGPASSWORD=${db_password}
 export PGUSER=postgres
 

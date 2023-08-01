@@ -5,6 +5,8 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"strconv"
+	"strings"
 )
 
 type LogRpc struct {
@@ -28,11 +30,11 @@ type LogDb struct {
 	Topic3              string
 	Data                string
 	BlockHash           string
-	BlockNumber         string
+	BlockNumber         uint64
 	TransactionHash     string
-	TransactionIndex    string
-	LogIndex            string
-	TransactionLogIndex string
+	TransactionIndex    uint64
+	LogIndex            uint64
+	TransactionLogIndex uint64
 	Removed             bool
 }
 
@@ -44,13 +46,22 @@ func NewLogDb(r LogRpc) (d LogDb) {
 	d.Topic3 = r.Topics[3]
 	d.Data = r.Data
 	d.BlockHash = r.BlockHash
-	d.BlockNumber = r.BlockNumber
+	d.BlockNumber = FromHex(r.BlockNumber)
 	d.TransactionHash = r.TransactionHash
-	d.TransactionIndex = r.TransactionIndex
-	d.LogIndex = r.LogIndex
-	d.TransactionLogIndex = r.TransactionLogIndex
+	d.TransactionIndex = FromHex(r.TransactionIndex)
+	d.LogIndex = FromHex(r.LogIndex)
+	d.TransactionLogIndex = FromHex(r.TransactionLogIndex)
 	d.Removed = r.Removed
 
+	return
+}
+
+func FromHex(hex string) (value uint64) {
+	s := strings.Replace(hex, "0x", "", -1)
+	value, err := strconv.ParseUint(s, 16, 64)
+	if err != nil {
+		log.Printf("cannot FromHex: %s\n", err)
+	}
 	return
 }
 
@@ -108,6 +119,8 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 		logsDb = append(logsDb, d)
 	}
 
+	lastLog := logsDb[len(logsDb)-1]
+
 	db, err := sqlx.Open("pgx", dataSourceName) // postgres
 	if err != nil {
 		log.Fatalf("sqlx.Open %v", err)
@@ -127,7 +140,7 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 		log.Fatalf("result.RowsAffected %v", err)
 	}
 
-	log.Printf("inserted %v rows out of %v records", rows, len(logsDb))
+	log.Printf("inserted %v rows out of %v records with last block number %v", rows, len(logsDb), lastLog.BlockNumber)
 
 	err = db.Close()
 	if err != nil {

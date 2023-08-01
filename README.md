@@ -1,7 +1,7 @@
 # EVM Archive
 
-This is an ETL utility to archive logs emitted by smart contracts in Ethereum or another EVM compatible
-blockchain into a Postgres database.
+This is an ETL utility to archive logs emitted by smart contracts in Ethereum or another EVM
+compatible blockchain into a Postgres database.
 
 - Extracts logs from a full blockchain node by calling
   [eth_getLogs](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getlogs)
@@ -39,8 +39,8 @@ We store this row in Postgres:
 
 ## Create the database
 
-We name our database by the name of the blockchain (ethereum or moonbeam), its network (mainnet
-or goerli), and a namespace to separate dev and prod deployments, like `ethereum_goerli_dev` or
+We name our database by the name of the blockchain (ethereum or moonbeam), its network (mainnet or
+goerli), and a namespace to separate dev and prod deployments, like `ethereum_goerli_dev` or
 `moonbeam_mainnet_prod`.
 
 We create a separate database and not a schema because we use schemas to group views that decode raw
@@ -51,8 +51,7 @@ Other views that decode contract events are grouped into schemas representing la
 names or standards (aave, beamswap, erc20) like `beamswap.GlintTokenV1_evt_Transfer`.
 
 You don't have to follow this pattern and can create `logs` table in any schema in any database
-you'd like.
-Use the table's definition from [schema.sql](./schema.sql).
+you'd like. Use the table's definition from [schema.sql](./schema.sql).
 
 This script [db-create.sh](./db-create.sh) will create the database using admin user `postgres`
 authenticated by `db_password`, and the user this app will connect as: `evm_archive` authenticated
@@ -84,26 +83,22 @@ Query filter is controlled by env variables:
   latest block. TODO:
   Need to first get the latest block number inserted from the database then start the query from it.
   Otherwise we will query from the same block defined by this env variable on process restart. Note
-  that inserts won't
-  fail (we ignore with `do nothing` violations of primary key in the insert statement).
+  that inserts won't fail (we ignore with `do nothing` violations of primary key in the insert
+  statement).
 - `EVM_ARCHIVE_TO_BLOCK` block number to end with, if omitted will query indefinitely for subsequent
   blocks.
 - `EVM_ARCHIVE_BLOCK_STEP` how many blocks to extract the logs from, if omitted will default to 100.
-  Adjust this
-  parameter to the frequency of the logs you're extracting. Too big a value can lead to the
-  blockchain node
-  refusing to return too many records, too small can slow down the extraction process. TODO: This
-  logic can be
-  improved by adjusting this value dynamically: start with a large number and decrease it when node
-  complains,
-  increase it again when start getting too few records per call.
+  Adjust this parameter to the frequency of the logs you're extracting. Too big a value can lead to
+  the blockchain node refusing to return too many records, too small can slow down the extraction
+  process. TODO: This logic can be improved by adjusting this value dynamically: start with a large
+  number and decrease it when node complains, increase it again when start getting too few records
+  per call.
 - `EVM_ARCHIVE_SLEEP_SECONDS` will pause in between queries for the latest block
-  when `EVM_ARCHIVE_FROM_BLOCK` is
-  not set. Adjust this so the total time between calls (time to extract and insert plus sleep time)
-  is less than
-  the time to produce a new block. TODO: This logic of querying for the latest block is flawed as a
-  query and insert
-  which take longer than block time can make the next call for the latest skip a block.
+  when `EVM_ARCHIVE_FROM_BLOCK` is not set. Adjust this so the total time between calls (time to
+  extract and insert plus sleep time)
+  is less than the time to produce a new block. TODO: This logic of querying for the latest block is
+  flawed as a query and insert which take longer than block time can make the next call for the
+  latest skip a block.
 
 Set these parameters from an [env](./example.env) file and run.
 
@@ -120,13 +115,13 @@ Build docker image and push it to your repository on docker.io.
 image_evm_archive="mydockeriousername/evm-archive:latest" ./build.sh
 ```
 
-Deploy to your k8s cluster with *kubectl*. Edit [deploy.yaml](./deploy.sh) to set env variables to 
-control the logs filter like contract addresses. Script [deploy.sh](./deploy.sh) has a 
-convenient function with which you can deploy multiple  
-instances each archiving a different chain or its shard, like for 
-`ethereum-mainnet-prod`, `ethereum-mainnet-dev`, `ethereum-goerli2023-prod`, 
-`moonbeam-mainnet-dev` etc. Will first try to create the database, schema and
-tables with [db-create.sh](./db-create.sh). Docker image if not specified will default to 
+Deploy to your k8s cluster with *kubectl*. Edit [deploy.yaml](./deploy.sh) to set env variables to
+control the logs filter like contract addresses. Script [deploy.sh](./deploy.sh) has a convenient
+function with which you can deploy multiple  
+instances each archiving a different chain or its shard, like for
+`ethereum-mainnet-prod`, `ethereum-mainnet-dev`, `ethereum-goerli2023-prod`,
+`moonbeam-mainnet-dev` etc. Will first try to create the database, schema and tables
+with [db-create.sh](./db-create.sh). Docker image if not specified will default to
 `olegabu/evm-archive:latest`.
 
 ```shell
@@ -139,21 +134,23 @@ The raw event log data is hard to analyze. It needs to be decoded so its numeric
 in calculations and its hex values be seen as text and addresses.
 
 The usual approach to archive onchain data is to *index* smart contracts with *subgraphs*: extract
-data of specific contracts, decode it on the fly by code specially written for its events, and
-store decoded for querying.
+data of specific contracts, decode it on the fly by code specially written for them, and store
+decoded events for querying.
 
 We postpone the decoding stage to the time of the actual query: the data is stored encoded as
-received and gets decoded later. This gives us flexibility in interpreting data: we don't have 
-to know the contract's ABI at the time of event capture. This approach does not require
-efforts to index specific contracts or write subgraph code to interpret them.
+received. This gives us flexibility in interpreting data: we don't have to know the contract's ABI
+at the time of event capture. This approach does not require efforts to index specific contracts or
+write subgraph code to interpret them. We can extract and load into our database raw logs of as 
+many contracts as we may be interested in, or of all the contracts for a range of dates. Then 
+we decode on the fly when we run a query.
 
-For decoding we employ user defined functions within SQL select statements. Once we obtain 
-the contract's ABI we know what functions (to_uint256, to_address) to apply to raw columns and what 
-names to give to resulting columns.
+For decoding we employ user defined functions within SQL select statements. Once we obtain the
+contract's ABI we know what functions (to_uint256, to_address) to apply to raw data and what
+names to give to the resulting columns.
 
-This turns the usual ETL approach to ELT: extract, load raw, transform when reading. We extract
-logs of all contracts and load them raw into the database to be queried by functions and views
-that know how to decode them.
+This turns the usual ETL approach to ELT: extract, load raw, transform when reading. We extract logs
+of all contracts and load them raw into the database to be queried by functions and views that know
+how to decode them.
 
 From this row with a raw log:
 
@@ -178,7 +175,7 @@ from data.logs
 where topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 ```
 
-When you know the event's ABI:
+Which you compose knowing the event's ABI:
 
 ```json
 {
@@ -206,5 +203,5 @@ When you know the event's ABI:
 ```
 
 Please see our other repo
-[ethereum-sql](https://github.com/SummaryDev/ethereum-sql) for SQL functions to decode event values and 
-scripts to turn ABI files into database views.
+[ethereum-sql](https://github.com/SummaryDev/ethereum-sql) for SQL functions to decode event values
+and scripts to turn ABI files into database views.
