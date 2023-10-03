@@ -7,10 +7,11 @@ import (
 	"strings"
 
 	//_ "github.com/lib/pq"
-	rpc "github.com/ybbus/jsonrpc/v3"
 	"log"
 	"os"
 	"time"
+
+	rpc "github.com/ybbus/jsonrpc/v3"
 )
 
 func getArgs() (endpoint string, dataSourceName string, contracts []string, fromBlock uint64, toBlock uint64, blockStep uint64, sleepSeconds uint64) {
@@ -85,9 +86,11 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 	for failed {
 		log.Printf("query %v with %v %v\n", endpoint, method, query)
 
-		response, err := client.Call(context.Background(), method, query)
+		params := append(make([]interface{}, 0), query)
 
-		//log.Printf("response %v", response)
+		response, err := client.Call(context.Background(), method, params)
+
+		// log.Printf("response %v", response)
 
 		if err != nil {
 			failed = true
@@ -110,8 +113,7 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 			failed = true
 			log.Println("retrying immediately after Call failed with nil response")
 		} else if response.Error != nil {
-			failed = true
-			log.Printf("retrying immediately after Call failed with response.Error %v\n", response.Error)
+			panic(fmt.Sprint("exiting immediately after Call failed with response.Error %v\n", response.Error))
 		} else {
 			failed = false
 

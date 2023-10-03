@@ -2,40 +2,40 @@ package main
 
 import (
 	"encoding/json"
-	_ "github.com/jackc/pgx/stdlib"
-	"github.com/jmoiron/sqlx"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
+
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/jmoiron/sqlx"
 )
 
 type LogRpc struct {
-	Address             string    `json:"address"`
-	Topics              [4]string `json:"topics"`
-	Data                string    `json:"data"`
-	BlockHash           string    `json:"blockHash"`
-	BlockNumber         string    `json:"blockNumber"`
-	TransactionHash     string    `json:"transactionHash"`
-	TransactionIndex    string    `json:"transactionIndex"`
-	LogIndex            string    `json:"logIndex"`
-	TransactionLogIndex string    `json:"transactionLogIndex"`
-	Removed             bool      `json:"removed"`
+	Address          string    `json:"address"`
+	Topics           [4]string `json:"topics"`
+	Data             string    `json:"data"`
+	BlockHash        string    `json:"blockHash"`
+	BlockNumber      string    `json:"blockNumber"`
+	TransactionHash  string    `json:"transactionHash"`
+	TransactionIndex string    `json:"transactionIndex"`
+	LogIndex         string    `json:"logIndex"`
+	Removed          bool      `json:"removed"`
 }
 
 type LogDb struct {
-	Address             string
-	Topic0              string
-	Topic1              string
-	Topic2              string
-	Topic3              string
-	Data                string
-	BlockHash           string
-	BlockNumber         uint64
-	TransactionHash     string
-	TransactionIndex    uint64
-	LogIndex            uint64
-	TransactionLogIndex uint64
-	Removed             bool
+	Address          string
+	Topic0           string
+	Topic1           string
+	Topic2           string
+	Topic3           string
+	Data             string
+	BlockHash        string
+	BlockNumber      uint64
+	TransactionHash  string
+	TransactionIndex uint64
+	LogIndex         uint64
+	Removed          bool
 }
 
 func NewLogDb(r LogRpc) (d LogDb) {
@@ -50,7 +50,6 @@ func NewLogDb(r LogRpc) (d LogDb) {
 	d.TransactionHash = r.TransactionHash
 	d.TransactionIndex = FromHex(r.TransactionIndex)
 	d.LogIndex = FromHex(r.LogIndex)
-	d.TransactionLogIndex = FromHex(r.TransactionLogIndex)
 	d.Removed = r.Removed
 
 	return
@@ -65,8 +64,15 @@ func FromHex(hex string) (value uint64) {
 	return
 }
 
+func ToHex(value uint64) (hex string) {
+	hex = fmt.Sprintf("0x%x", value)
+	return
+}
+
 type GetLogsRequest struct {
-	Filter Filter `json:"filter"`
+	Address   string `json:"address,omitempty"`
+	FromBlock string `json:"fromBlock,omitempty"`
+	ToBlock   string `json:"toBlock,omitempty"`
 }
 
 func (t *GetLogsRequest) ToJson() (s string) {
@@ -75,24 +81,18 @@ func (t *GetLogsRequest) ToJson() (s string) {
 	return
 }
 
-type Filter struct {
-	Address   []string `json:"address,omitempty"`
-	FromBlock uint64   `json:"fromBlock,omitempty"`
-	ToBlock   uint64   `json:"toBlock,omitempty"`
-}
-
 func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *GetLogsRequest {
 	q := &GetLogsRequest{}
 	if len(contracts) > 0 {
-		q.Filter.Address = contracts
+		q.Address = contracts[0]
 	}
 	if fromBlock > 0 {
-		q.Filter.FromBlock = fromBlock
+		q.FromBlock = ToHex(fromBlock)
 	}
 	if toBlock >= fromBlock {
-		q.Filter.ToBlock = toBlock
+		q.ToBlock = ToHex(toBlock)
 	}
-	//log.Println(q.ToJson())
+	log.Println(q.ToJson())
 	return q
 }
 
@@ -100,7 +100,6 @@ type GetLogsResponse []LogRpc
 
 func (t *GetLogsResponse) Len() int {
 	logs := *t
-
 	return len(logs)
 }
 
@@ -116,7 +115,7 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 
 	for _, r := range logs {
 		d := NewLogDb(r)
-		logsDb = append(logsDb, d)
+		logsDb = append(logsDb, d) //todo don't append if removed then drop column removed
 	}
 
 	lastLog := logsDb[len(logsDb)-1]
@@ -126,8 +125,8 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 		log.Fatalf("sqlx.Open %v", err)
 	}
 
-	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, block_hash, block_number, transaction_hash, transaction_index, log_index, transaction_log_index, removed) " +
-		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :transactionlogindex, :removed) " +
+	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, block_hash, block_number, transaction_hash, transaction_index, log_index, removed) " +
+		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :removed) " +
 		"on conflict on constraint logs_pkey do nothing" //todo on conflict on constraint logs_pkey update
 
 	result, err := db.NamedExec(insertQuery, logsDb)

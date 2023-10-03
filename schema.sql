@@ -11,23 +11,23 @@ create schema if not exists data;
 -- grant select, update, usage on all sequences in schema data to evm_archive;
 
 -- users who are readers of the data like BI tools
-grant usage on schema data to redash;
-grant usage on schema data to hasura;
-grant usage on schema data to metabase;
-grant usage on schema data to superset;
-grant usage on schema data to graphile;
+-- grant usage on schema data to redash;
+-- grant usage on schema data to hasura;
+-- grant usage on schema data to metabase;
+-- grant usage on schema data to superset;
+-- grant usage on schema data to graphile;
 
-grant select on all tables in schema data to redash;
-grant select on all tables in schema data to hasura;
-grant select on all tables in schema data to metabase;
-grant select on all tables in schema data to superset;
-grant select on all tables in schema data to graphile;
+-- grant select on all tables in schema data to redash;
+-- grant select on all tables in schema data to hasura;
+-- grant select on all tables in schema data to metabase;
+-- grant select on all tables in schema data to superset;
+-- grant select on all tables in schema data to graphile;
 
-alter default privileges for role evm_archive in schema data grant select on tables to hasura;
-alter default privileges for role evm_archive in schema data grant select on tables to superset;
-alter default privileges for role evm_archive in schema data grant select on tables to metabase;
-alter default privileges for role evm_archive in schema data grant select on tables to redash;
-alter default privileges for role evm_archive in schema data grant select on tables to graphile;
+-- alter default privileges for role evm_archive in schema data grant select on tables to hasura;
+-- alter default privileges for role evm_archive in schema data grant select on tables to superset;
+-- alter default privileges for role evm_archive in schema data grant select on tables to metabase;
+-- alter default privileges for role evm_archive in schema data grant select on tables to redash;
+-- alter default privileges for role evm_archive in schema data grant select on tables to graphile;
 
 set search_path to data;
 
@@ -46,7 +46,6 @@ create table if not exists logs
   transaction_hash      text,
   transaction_index     numeric,
   log_index             numeric,
-  transaction_log_index numeric,
   removed               boolean,
   block_timestamp       timestamp,
   primary key (block_hash, transaction_hash, log_index)
