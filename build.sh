@@ -6,4 +6,4 @@ echo "build and push $image_evm_archive"
 
 docker build -t $image_evm_archive . 
 
-# docker push $image_evm_archive
+docker push $image_evm_archive
