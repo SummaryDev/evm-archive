@@ -10,7 +10,7 @@ compatible blockchain into a Postgres database.
   indexes from hex to decimals.
 - Loads into `logs` table in the Postgres database.
 
-From this response from a blockchain node (try it with [curl_get_logs.sh](./curl_get_logs.sh)):
+From this response from a blockchain node (try it with [curl-get-logs.sh](./curl-get-logs.sh)):
 
 ```json
 {
@@ -36,6 +36,22 @@ We store this row in Postgres:
 | address                                    | topic0                                                             | topic1                                                             | topic2                                                             | topic3 | data                                                               | block_hash                                                         | block_number | transaction_hash                                                   | transaction_index | log_index | transaction_log_index | removed | block_timestamp |
 |--------------------------------------------|--------------------------------------------------------------------|--------------------------------------------------------------------|--------------------------------------------------------------------|--------|--------------------------------------------------------------------|--------------------------------------------------------------------|--------------|--------------------------------------------------------------------|-------------------|-----------|-----------------------|---------|-----------------|
 | 0xcd3b51d98478d53f4515a306be565c6eebef1d58 | 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef | 0x0000000000000000000000000000000000000000000000000000000000000000 | 0x000000000000000000000000f78031c993afb43e79f017938326ff34418ec36e |        | 0x000000000000000000000000000000000000000000000000aad50c474db4eb50 | 0x09f1e5619fcbfaa873fcf4e924b724dac6b84e0f9c02341f75c11393d586792b | 222431       | 0xf9a7cefb1ab525781aac1b0ca29bf76b90cd2f16e22ee9e91cf7d2dcae78aa08 | 6                 | 18        | 1                     | false   |                 |
+
+## Quick start
+
+To try it out quickly start in docker containers by `docker-compose up`:
+- event log [archiver](./docker-compose.yaml#L16)
+- postgres [database](./docker-compose.yaml#L4) with SQL [functions](https://github.com/SummaryDev/ethereum-sql) and views to decode event payloads 
+- GraphQL [engine](./docker-compose.yaml#L43) by [Graphile](https://www.graphile.org/postgraphile/introduction/)
+
+When starting with an empty database for the first time, [init.sql](./init.sql) script will create the schema, 
+functions to decode payload. Add view definitions for your contracts' events at the end of the file. 
+You can generate them from contracts' ABIs with [ethereum-sql](https://github.com/SummaryDev/ethereum-sql).
+
+The postgres container keeps its data on your host in a local folder `postgres-data` to persist it between restarts.
+
+That was just a quick start to try things out: all the data are kpt in one `public` schema and there a few event definitions we're interested in. 
+The instructions below assume a more thorough setup with a separate db instance, deployments to Kubernetes.
 
 ## Create the database
 
@@ -79,26 +95,13 @@ Query filter is controlled by env variables:
 
 - `EVM_ARCHIVE_CONTRACTS` comma delimited contract addresses, if omitted will query for logs emitted
   by all contracts
-- `EVM_ARCHIVE_FROM_BLOCK` block number to start with, if omitted will query repeatedly for the
-  latest block. TODO:
-  Need to first get the latest block number inserted from the database then start the query from it.
-  Otherwise we will query from the same block defined by this env variable on process restart. Note
-  that inserts won't fail (we ignore with `do nothing` violations of primary key in the insert
-  statement).
-- `EVM_ARCHIVE_TO_BLOCK` block number to end with, if omitted will query indefinitely for subsequent
-  blocks.
+- `EVM_ARCHIVE_FROM_BLOCK` will start getting logs from this block number unless the block saved in the db is higher. Use this as a starting point when the logs table is empty. Note that inserts won't fail (we ignore with `do nothing` violations of primary key in the insert statement).
+- `EVM_ARCHIVE_TO_BLOCK` block number to end with, if not specified will keep querying to infinity with some sleep in between.
 - `EVM_ARCHIVE_BLOCK_STEP` how many blocks to extract the logs from, if omitted will default to 100.
   Adjust this parameter to the frequency of the logs you're extracting. Too big a value can lead to
   the blockchain node refusing to return too many records, too small can slow down the extraction
-  process. TODO: This logic can be improved by adjusting this value dynamically: start with a large
-  number and decrease it when node complains, increase it again when start getting too few records
-  per call.
-- `EVM_ARCHIVE_SLEEP_SECONDS` will pause in between queries for the latest block
-  when `EVM_ARCHIVE_FROM_BLOCK` is not set. Adjust this so the total time between calls (time to
-  extract and insert plus sleep time)
-  is less than the time to produce a new block. TODO: This logic of querying for the latest block is
-  flawed as a query and insert which take longer than block time can make the next call for the
-  latest skip a block.
+  process.
+- `EVM_ARCHIVE_SLEEP_SECONDS` sleep between queries. Makes sense to adjust to about block creation time or longer.
 
 Set these parameters from an [env](./example.env) file and run.
 

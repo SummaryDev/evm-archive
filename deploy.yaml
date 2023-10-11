@@ -27,6 +27,14 @@ spec:
           value: "evm_archive"
         - name: EVM_ARCHIVE_ENDPOINT
           value: "https://${evm_chain}.api.onfinality.io/public"
+        - name: EVM_ARCHIVE_FROM_BLOCK
+          value: 18327729
+        # - name: EVM_ARCHIVE_TO_BLOCK
+        #   value: 18327729
+        - name: EVM_ARCHIVE_BLOCK_STEP
+          value: 10
+        - name: EVM_ARCHIVE_SLEEP_SECONDS
+          value: 5
 #          value: "http://${evm_network}:9000"
 #        resources:
 #          limits:

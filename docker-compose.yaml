@@ -8,9 +8,9 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - '5432:5432'
+      - 5432:5432
     volumes:
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./postgres-data:/var/lib/postgresql/data
 
   archive:
@@ -18,16 +18,55 @@ services:
     environment:
       - PGUSER=postgres
       - PGPASSWORD=postgres
-      - PGHOST=localhost
+      - PGHOST=postgres
       - PGDATABASE=postgres
-      - EVM_ARCHIVE_SCHEMA=data
-      - EVM_ARCHIVE_ENDPOINT=http://localhost:8545
-      - EVM_ARCHIVE_FROM_BLOCK=18266721
-      - EVM_ARCHIVE_TO_BLOCK=18266721
-      - EVM_ARCHIVE_CONTRACTS=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
-    network_mode: host
+      - EVM_ARCHIVE_SCHEMA=public
+      - EVM_ARCHIVE_ENDPOINT=http://host.docker.internal:8545
+      # will start getting logs from this block number unless the block saved in the db is higher; use this as a starting point when the logs table is empty
+      - EVM_ARCHIVE_FROM_BLOCK=18327729
+      # if not specified will keep querying to infinity with some sleep in between
+      # - EVM_ARCHIVE_TO_BLOCK=18322923
+      # get logs of several  blocks at a time; together with sleep this controls the load of querying
+      - EVM_ARCHIVE_BLOCK_STEP=10
+      # sleep between queries; makes sense to adjust to about block creation time or longer
+      - EVM_ARCHIVE_SLEEP_SECONDS=5
+      # if not specified will query for logs of all contracts, leave it commented out when querying local anvil with a fork with your own transactions only
+      # - EVM_ARCHIVE_CONTRACTS=0x9B4aC8FAfC44575C6963fA22D50963379e899a49
     depends_on: 
       - postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: sh -c "echo 'delaying start to to let postgres initialize' 
+      && sleep 5 
+      && /go/bin/evm-archive"
+
+  graphile:
+    image: olegabu/graphile:latest
+    # restart: always
+    depends_on:
+      - archive
+    ports:
+      - 5000:5000
+    entrypoint : sh -c "echo 'delaying start to let postgres initialize' 
+      && sleep 5 
+      && ./cli.js --plugins @graphile/pg-pubsub 
+      --schema public 
+      --connection postgres://postgres:postgres@postgres:5432/postgres 
+      --owner-connection postgres://postgres:postgres@postgres:5432/postgres 
+      --append-plugins @graphile-contrib/pg-simplify-inflector 
+      --skip-plugins graphile-build:NodePlugin 
+      --enhance-graphiql 
+      --watch 
+      --allow-explain 
+      --simple-collections only 
+      --legacy-relations omit 
+      --dynamic-json 
+      --disable-default-mutations 
+      --no-ignore-rbac 
+      --no-ignore-indexes 
+      --cors 
+      --subscriptions 
+      --simple-subscriptions"
 
 volumes:
   postgres-data:
