@@ -26,6 +26,8 @@ services:
       - EVM_ARCHIVE_TO_BLOCK=18266721
       - EVM_ARCHIVE_CONTRACTS=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
     network_mode: host
+    depends_on: 
+      - postgres
 
 volumes:
   postgres-data:

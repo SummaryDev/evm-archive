@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	rpc "github.com/ybbus/jsonrpc/v3"
 )
 
@@ -50,6 +51,8 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		toBlock = ^uint64(0) // infinity
 	}
 
 	blockStepString := os.Getenv("EVM_ARCHIVE_BLOCK_STEP")
@@ -69,7 +72,7 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 			panic(err)
 		}
 	} else {
-		sleepSeconds = 10
+		sleepSeconds = 5
 	}
 
 	return
@@ -113,7 +116,7 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 			failed = true
 			log.Println("retrying immediately after Call failed with nil response")
 		} else if response.Error != nil {
-			panic(fmt.Sprint("exiting immediately after Call failed with response.Error %v\n", response.Error))
+			panic(fmt.Sprintf("exiting immediately after Call failed with response.Error %v", response.Error))
 		} else {
 			failed = false
 
@@ -131,35 +134,41 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 	}
 }
 
+func getMaxBlockNumber(dataSourceName string) (blockNumber uint64) {
+	db, err := sqlx.Open("pgx", dataSourceName) // postgres
+	if err != nil {
+		log.Fatalf("sqlx.Open %v", err)
+	}
+	defer db.Close()
+
+	err = db.QueryRow("select max(block_number) from logs").Scan(&blockNumber)
+	if err != nil {
+		blockNumber = 0
+	}
+
+	return
+}
+
 func main() {
-	endpoint, dataSourceName, contracts, fromBlock, toBlock, blockStep, sleepSeconds := getArgs()
+	endpoint, dataSourceName, contracts, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
 
 	sleep := time.Duration(sleepSeconds) * time.Second
-	const maxUint = ^uint64(0)
 
-	var q *GetLogsRequest
+	for blockNumber := fromBlockArg; blockNumber <= toBlockArg; {
+		// get the latest block number from the db
+		maxBlockNumber := getMaxBlockNumber(dataSourceName)
 
-	if fromBlock > 0 {
-		// query starting from fromBlock to infinity or to toBlock if it's specified properly
-		if toBlock < fromBlock {
-			toBlock = maxUint
+		if blockNumber <= maxBlockNumber {
+			blockNumber = maxBlockNumber + 1
 		}
 
-		log.Printf("repeating query for logs in %v blocks from %v to %v", blockStep, fromBlock, toBlock)
+		fromBlock := blockNumber
+		toBlock := fromBlock + blockStep - 1
 
-		for blockNumber := fromBlock; blockNumber <= toBlock; blockNumber = blockNumber + blockStep {
-			q = NewGetLogsRequest(contracts, blockNumber, blockNumber+blockStep-1)
-			query(endpoint, dataSourceName, q)
-		}
-	} else {
-		// query indefinitely for the latest block if fromBlock not specified
-		for {
-			log.Printf("repeating query for logs in the latest block with sleep %v in between", sleep)
+		log.Printf("query for logs in blocks from %v to %v then sleep for %v", fromBlock, toBlock, sleep)
 
-			q = NewGetLogsRequest(contracts, 0, 0)
-			query(endpoint, dataSourceName, q)
+		query(endpoint, dataSourceName, NewGetLogsRequest(contracts, fromBlock, toBlock))
 
-			time.Sleep(sleep)
-		}
+		time.Sleep(sleep)
 	}
 }

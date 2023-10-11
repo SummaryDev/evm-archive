@@ -15,10 +15,10 @@ RUN go build -o /go/bin/evm-archive
 ############################
 # STEP 2 build a small image
 ############################
-FROM scratch
+FROM alpine
 # copy the ca-certificate.crt from the build stage
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy our static executable.
 COPY --from=builder /go/bin/evm-archive /go/bin/evm-archive
-# Run the hello binary.
+# Run the executable.
 ENTRYPOINT ["/go/bin/evm-archive"]

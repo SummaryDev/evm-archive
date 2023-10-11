@@ -92,7 +92,7 @@ func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *Ge
 	if toBlock >= fromBlock {
 		q.ToBlock = ToHex(toBlock)
 	}
-	log.Println(q.ToJson())
+	log.Printf("from %v to %v with %v", fromBlock, toBlock, q.ToJson())
 	return q
 }
 
@@ -124,6 +124,7 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 	if err != nil {
 		log.Fatalf("sqlx.Open %v", err)
 	}
+	defer db.Close()
 
 	insertQuery := "insert into logs (address, topic0, topic1, topic2, topic3, data, block_hash, block_number, transaction_hash, transaction_index, log_index, removed) " +
 		"values (:address, :topic0, :topic1, :topic2, :topic3, :data, :blockhash, :blocknumber, :transactionhash, :transactionindex, :logindex, :removed) " +
@@ -140,11 +141,6 @@ func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
 	}
 
 	log.Printf("inserted %v rows out of %v records with last block number %v", rows, len(logsDb), lastLog.BlockNumber)
-
-	err = db.Close()
-	if err != nil {
-		log.Fatalf("db.Close %v", err)
-	}
 
 	countSaved = rows
 
