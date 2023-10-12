@@ -64,3 +64,18 @@ create index on logs (block_number);
 comment on table logs is 'Event emitted by a smart contract';
 comment on column logs.address is 'Address of the smart contract emitting the event';
 comment on column logs.topic0 is 'Hash of the event name';
+
+create table if not exists price
+(
+  address               text,
+  block_number          numeric,
+  price                 numeric,
+  primary key (address, block_number)
+);
+
+create index on price (address);
+
+comment on table price is 'Price of tokens';
+comment on column price.address is 'Address of the token smart contract';
+comment on column price.block_number is 'As of block';
+comment on column price.price is 'Price in USD with precision of 8 digits';

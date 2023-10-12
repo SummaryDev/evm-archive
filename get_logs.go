@@ -2,10 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"strconv"
-	"strings"
 
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -55,20 +52,6 @@ func NewLogDb(r LogRpc) (d LogDb) {
 	return
 }
 
-func FromHex(hex string) (value uint64) {
-	s := strings.Replace(hex, "0x", "", -1)
-	value, err := strconv.ParseUint(s, 16, 64)
-	if err != nil {
-		log.Printf("cannot FromHex: %s\n", err)
-	}
-	return
-}
-
-func ToHex(value uint64) (hex string) {
-	hex = fmt.Sprintf("0x%x", value)
-	return
-}
-
 type GetLogsRequest struct {
 	Address   string `json:"address,omitempty"`
 	FromBlock string `json:"fromBlock,omitempty"`
@@ -96,6 +79,10 @@ func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *Ge
 	return q
 }
 
+func NewGetLogsResponse() *GetLogsResponse {
+	return &GetLogsResponse{}
+}
+
 type GetLogsResponse []LogRpc
 
 func (t *GetLogsResponse) Len() int {
@@ -103,7 +90,7 @@ func (t *GetLogsResponse) Len() int {
 	return len(logs)
 }
 
-func (t *GetLogsResponse) Save(dataSourceName string) (countSaved int64) {
+func (t *GetLogsResponse) Save(dataSourceName string, req Request) (countSaved int64) {
 	logs := *t
 
 	if len(logs) == 0 {

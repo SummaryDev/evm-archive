@@ -15,16 +15,18 @@ import (
 	rpc "github.com/ybbus/jsonrpc/v3"
 )
 
-func getArgs() (endpoint string, dataSourceName string, contracts []string, fromBlock uint64, toBlock uint64, blockStep uint64, sleepSeconds uint64) {
+func getArgs() (endpoint string, dataSourceName string, contracts []string, tokens []string, fromBlock uint64, toBlock uint64, blockStep uint64, sleepSeconds uint64) {
 
 	endpoint = os.Getenv("EVM_ARCHIVE_ENDPOINT")
 	if endpoint == "" {
-		panic("please set env EVM_ARCHIVE_ENDPOINT")
+		log.Println("EVM_ARCHIVE_ENDPOINT not set using default 'http://localhost:8545'")
+		endpoint = "http://localhost:8545"
 	}
 
 	schema := os.Getenv("EVM_ARCHIVE_SCHEMA")
 	if schema == "" {
-		panic("please set env EVM_ARCHIVE_SCHEMA")
+		log.Println("EVM_ARCHIVE_SCHEMA not set using default 'public'")
+		schema = "public"
 	}
 
 	dataSourceName = fmt.Sprintf("host=%v dbname=%v user=%v password=%v search_path=%v", os.Getenv("PGHOST"), os.Getenv("PGDATABASE"), os.Getenv("PGUSER"), os.Getenv("PGPASSWORD"), schema)
@@ -35,13 +37,18 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 		contracts = strings.Split(contractString, ",")
 	}
 
+	tokenString := os.Getenv("EVM_ARCHIVE_TOKENS")
+	if tokenString != "" {
+		tokens = strings.Split(tokenString, ",")
+	}
+
 	var err error
 
 	fromBlockString := os.Getenv("EVM_ARCHIVE_FROM_BLOCK")
 	if fromBlockString != "" {
 		fromBlock, err = strconv.ParseUint(fromBlockString, 10, 64)
 		if err != nil {
-			panic(err)
+			log.Fatalf("cannot parse EVM_ARCHIVE_FROM_BLOCK for %v", err)
 		}
 	}
 
@@ -49,7 +56,7 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 	if toBlockString != "" {
 		toBlock, err = strconv.ParseUint(toBlockString, 10, 64)
 		if err != nil {
-			panic(err)
+			log.Fatalf("cannot parse EVM_ARCHIVE_TO_BLOCK for %v", err)
 		}
 	} else {
 		toBlock = ^uint64(0) // infinity
@@ -59,7 +66,7 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 	if blockStepString != "" {
 		blockStep, err = strconv.ParseUint(blockStepString, 10, 64)
 		if err != nil {
-			panic(err)
+			log.Fatalf("cannot parse EVM_ARCHIVE_BLOCK_STEP for %v", err)
 		}
 	} else {
 		blockStep = 100
@@ -69,7 +76,7 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 	if sleepSecondsString != "" {
 		sleepSeconds, err = strconv.ParseUint(sleepSecondsString, 10, 64)
 		if err != nil {
-			panic(err)
+			log.Fatalf("cannot parse EVM_ARCHIVE_SLEEP_SECONDS for %v", err)
 		}
 	} else {
 		sleepSeconds = 5
@@ -78,25 +85,26 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, from
 	return
 }
 
-func query(endpoint string, dataSourceName string, query interface{}) {
-	const method = "eth_getLogs"
-
+func query(method string, endpoint string, dataSourceName string, req Request, res Persistent) {
 	client := rpc.NewClient(endpoint)
 
 	// keep retrying to overcome recoverable comm errors
-	failed := true
+	retry := true
 
-	for failed {
-		log.Printf("query %v with %v %v\n", endpoint, method, query)
+	for retry {
+		params := append(make([]interface{}, 0), req.Query)
+		if req.AsOfBlock > 0 {
+			params = append(params, ToHex(req.AsOfBlock))
+		}
 
-		params := append(make([]interface{}, 0), query)
+		log.Printf("call %v with %v %v as of %v\n", endpoint, method, req.Query, req.AsOfBlock)
 
 		response, err := client.Call(context.Background(), method, params)
 
 		// log.Printf("response %v", response)
 
 		if err != nil {
-			failed = true
+			retry = true
 
 			switch e := err.(type) {
 			case *rpc.HTTPError:
@@ -107,29 +115,32 @@ func query(endpoint string, dataSourceName string, query interface{}) {
 					log.Printf("sleeping for 5s then retrying after Call failed with server overloaded HTTPError=%v\n", err)
 					time.Sleep(time.Second * 5)
 				} else {
-					log.Printf("retrying immediately after Call failed with HTTPError=%v\n", err)
+					log.Printf("retrying after Call failed with HTTPError=%v\n", err)
 				}
 			default:
-				log.Printf("retrying immediately after Call failed with err=%v\n", err)
+				log.Printf("retrying after Call failed with err=%v\n", err)
 			}
 		} else if response == nil {
-			failed = true
-			log.Println("retrying immediately after Call failed with nil response")
+			retry = true
+			log.Println("retrying after Call failed with nil response")
 		} else if response.Error != nil {
-			panic(fmt.Sprintf("exiting immediately after Call failed with response.Error %v", response.Error))
+			if response.Error.Code == -32602 {
+				retry = false
+				log.Printf("not retrying after Call failed with response.Error %v\n", response.Error)
+			} else {
+				log.Fatalf("exiting after Call failed with unhandled response.Error %v", response.Error)
+			}
 		} else {
-			failed = false
+			retry = false
 
-			var getLogsResponse *GetLogsResponse
-
-			err := response.GetObject(&getLogsResponse)
+			err := response.GetObject(&res)
 			if err != nil {
-				log.Fatalf("cannot GetObject for GetLogsResponse %v\n", err)
+				log.Fatalf("cannot GetObject %v\n", err)
 			}
 
-			log.Printf("responded with %v records", getLogsResponse.Len())
+			log.Printf("%v responded with %v records", method, res.Len())
 
-			getLogsResponse.Save(dataSourceName)
+			res.Save(dataSourceName, req)
 		}
 	}
 }
@@ -146,11 +157,11 @@ func getMaxBlockNumber(dataSourceName string) (blockNumber uint64) {
 		blockNumber = 0
 	}
 
-	return
+	return /* uint64(18322923) */
 }
 
 func main() {
-	endpoint, dataSourceName, contracts, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
+	endpoint, dataSourceName, contracts, tokens, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
 
 	sleep := time.Duration(sleepSeconds) * time.Second
 
@@ -167,7 +178,11 @@ func main() {
 
 		log.Printf("query for logs in blocks from %v to %v then sleep for %v", fromBlock, toBlock, sleep)
 
-		query(endpoint, dataSourceName, NewGetLogsRequest(contracts, fromBlock, toBlock))
+		query("eth_getLogs", endpoint, dataSourceName, Request{0, NewGetLogsRequest(contracts, fromBlock, toBlock)}, NewGetLogsResponse())
+
+		for _, token := range tokens {
+			query("eth_call", endpoint, dataSourceName, Request{fromBlock, NewGetPriceRequest(token)}, NewGetPriceResponse())
+		}
 
 		time.Sleep(sleep)
 	}
