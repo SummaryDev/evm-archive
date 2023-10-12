@@ -88,15 +88,20 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, toke
 func query(method string, endpoint string, dataSourceName string, req Request, res Persistent) {
 	client := rpc.NewClient(endpoint)
 
+	params := make([]interface{}, 0)
+
+	if req.Query != nil {
+		params = append(params, req.Query)
+	}
+
+	if req.AsOfBlock > 0 {
+		params = append(params, ToHex(req.AsOfBlock))
+	}
+
 	// keep retrying to overcome recoverable comm errors
 	retry := true
 
 	for retry {
-		params := append(make([]interface{}, 0), req.Query)
-		if req.AsOfBlock > 0 {
-			params = append(params, ToHex(req.AsOfBlock))
-		}
-
 		log.Printf("call %v with %v %v as of %v\n", endpoint, method, req.Query, req.AsOfBlock)
 
 		response, err := client.Call(context.Background(), method, params)
@@ -145,7 +150,7 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 	}
 }
 
-func getMaxBlockNumber(dataSourceName string) (blockNumber uint64) {
+func getDatabaseBlockNumber(dataSourceName string) (blockNumber uint64) {
 	db, err := sqlx.Open("pgx", dataSourceName) // postgres
 	if err != nil {
 		log.Fatalf("sqlx.Open %v", err)
@@ -160,30 +165,60 @@ func getMaxBlockNumber(dataSourceName string) (blockNumber uint64) {
 	return /* uint64(18322923) */
 }
 
+func getNetworkBlockNumber(endpoint string) uint64 {
+	getBlockNumberResponse := NewGetBlockNumberResponse()
+
+	query("eth_blockNumber", endpoint, "", Request{0, nil}, getBlockNumberResponse)
+
+	return getBlockNumberResponse.ToNumber()
+}
+
 func main() {
 	endpoint, dataSourceName, contracts, tokens, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
 
 	sleep := time.Duration(sleepSeconds) * time.Second
 
-	for blockNumber := fromBlockArg; blockNumber <= toBlockArg; {
-		// get the latest block number from the db
-		maxBlockNumber := getMaxBlockNumber(dataSourceName)
+	// get the latest block number in the db
+	databaseBlockNumber := getDatabaseBlockNumber(dataSourceName)
 
-		if blockNumber <= maxBlockNumber {
-			blockNumber = maxBlockNumber + 1
+	var fromBlock, toBlock uint64
+
+	// start querying from the block right after the one we have in the db or from the number specified in the arguments if it's higher than the db
+	if fromBlockArg <= databaseBlockNumber {
+		fromBlock = databaseBlockNumber + 1
+	} else {
+		fromBlock = fromBlockArg
+	}
+
+	for fromBlock <= toBlockArg {
+		// get the latest block number in the network
+		networkBlockNumber := getNetworkBlockNumber(endpoint)
+
+		if fromBlock > networkBlockNumber {
+			log.Printf("sleeping for %v as intended block to index %v is higher than network block %v", sleep, fromBlock, networkBlockNumber)
+
+			time.Sleep(sleep)
+			continue
 		}
 
-		fromBlock := blockNumber
-		toBlock := fromBlock + blockStep - 1
+		toBlock = fromBlock + blockStep - 1
 
-		log.Printf("query for logs in blocks from %v to %v then sleep for %v", fromBlock, toBlock, sleep)
+		// if the window specified by block step is beyond the latest block in the network then shrink the window
+		if toBlock > networkBlockNumber {
+			toBlock = networkBlockNumber
+		}
+
+		log.Printf("query for logs in blocks from %v to %v", fromBlock, toBlock)
 
 		query("eth_getLogs", endpoint, dataSourceName, Request{0, NewGetLogsRequest(contracts, fromBlock, toBlock)}, NewGetLogsResponse())
 
 		for _, token := range tokens {
+			log.Printf("query for price of %v as of block %v", token, fromBlock)
+
 			query("eth_call", endpoint, dataSourceName, Request{fromBlock, NewGetPriceRequest(token)}, NewGetPriceResponse())
 		}
 
-		time.Sleep(sleep)
+		// progress to the block right after the window specified by block step
+		fromBlock = toBlock + 1
 	}
 }

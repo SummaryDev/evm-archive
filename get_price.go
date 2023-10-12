@@ -73,6 +73,11 @@ func (t *GetPriceResponse) Len() int {
 	}
 }
 
+func (t *GetPriceResponse) ToNumber() uint64 {
+	s := string(*t)
+	return FromHex(s)
+}
+
 func (t *GetPriceResponse) Save(dataSourceName string, req Request) (countSaved int64) {
 	if t.Len() == 0 {
 		log.Println("no price in the response")
@@ -84,11 +89,11 @@ func (t *GetPriceResponse) Save(dataSourceName string, req Request) (countSaved 
 		log.Fatal("cannot cast to GetPriceRequest")
 	}
 
-	price := string(*t)
+	price := t.ToNumber()
 	blockNumber := req.AsOfBlock
 	token := tokens[getPriceRequest.To]
 
-	priceDb := PriceDb{Address: token, BlockNumber: blockNumber, Price: FromHex(price)}
+	priceDb := PriceDb{Address: token, BlockNumber: blockNumber, Price: price}
 
 	db, err := sqlx.Open("pgx", dataSourceName) // postgres
 	if err != nil {
