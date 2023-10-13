@@ -101,6 +101,9 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 	// keep retrying to overcome recoverable comm errors
 	retry := true
 
+	// sleep for 10s between some retries
+	sleep := time.Duration(10) * time.Second
+
 	for retry {
 		log.Printf("call %v with %v %v as of %v\n", endpoint, method, req.Query, req.AsOfBlock)
 
@@ -114,16 +117,17 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 			switch e := err.(type) {
 			case *rpc.HTTPError:
 				if e.Code == 429 {
-					log.Printf("sleeping for 10s then retrying after Call failed with too many requests HTTPError=%v\n", err)
-					time.Sleep(time.Second * 10)
+					log.Printf("sleeping for %v then retrying after Call failed with too many requests HTTPError=%v\n", sleep, err)
+					time.Sleep(sleep)
 				} else if e.Code == 503 || e.Code == 504 {
-					log.Printf("sleeping for 5s then retrying after Call failed with server overloaded HTTPError=%v\n", err)
-					time.Sleep(time.Second * 5)
+					log.Printf("sleeping for %v then retrying after Call failed with server overloaded HTTPError=%v\n", sleep, err)
+					time.Sleep(sleep)
 				} else {
 					log.Printf("retrying after Call failed with HTTPError=%v\n", err)
 				}
 			default:
-				log.Printf("retrying after Call failed with err=%v\n", err)
+				log.Printf("sleeping for %v then retrying after Call failed with err=%v\n", sleep, err)
+				time.Sleep(sleep)
 			}
 		} else if response == nil {
 			retry = true
