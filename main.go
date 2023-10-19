@@ -177,6 +177,20 @@ func getNetworkBlockNumber(endpoint string) uint64 {
 	return getBlockNumberResponse.ToNumber()
 }
 
+func getLogs(contracts []string, fromBlock uint64, toBlock uint64, endpoint string, dataSourceName string) {
+	log.Printf("query for logs in blocks from %v to %v", fromBlock, toBlock)
+
+	call(RpcRequest{0, NewGetLogsRequest(contracts, fromBlock, toBlock), "eth_getLogs", endpoint}, RpcResponse{NewGetLogsResponse(), dataSourceName})
+}
+
+func getPrices(tokens []string, fromBlock uint64, endpoint string, dataSourceName string) {
+	for _, token := range tokens {
+		log.Printf("query for price of %v as of block %v", token, fromBlock)
+
+		call(RpcRequest{fromBlock, NewGetPriceRequest(token), "eth_call", endpoint}, RpcResponse{NewGetPriceResponse(), dataSourceName})
+	}
+}
+
 func main() {
 	endpoint, dataSourceName, contracts, tokens, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
 
@@ -212,15 +226,9 @@ func main() {
 			toBlock = networkBlockNumber
 		}
 
-		log.Printf("query for logs in blocks from %v to %v", fromBlock, toBlock)
+		getLogs(contracts, fromBlock, toBlock, endpoint, dataSourceName)
 
-		call(RpcRequest{0, NewGetLogsRequest(contracts, fromBlock, toBlock), "eth_getLogs", endpoint}, RpcResponse{NewGetLogsResponse(), dataSourceName})
-
-		for _, token := range tokens {
-			log.Printf("query for price of %v as of block %v", token, fromBlock)
-
-			call(RpcRequest{fromBlock, NewGetPriceRequest(token), "eth_call", endpoint}, RpcResponse{NewGetPriceResponse(), dataSourceName})
-		}
+		getPrices(tokens, fromBlock, endpoint, dataSourceName)
 
 		// progress to the block right after the window specified by block step
 		fromBlock = toBlock + 1
