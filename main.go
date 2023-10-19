@@ -85,8 +85,8 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, toke
 	return
 }
 
-func query(method string, endpoint string, dataSourceName string, req Request, res Persistent) {
-	client := rpc.NewClient(endpoint)
+func call(req RpcRequest, res RpcResponse) {
+	client := rpc.NewClient(req.endpoint)
 
 	params := make([]interface{}, 0)
 
@@ -105,9 +105,9 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 	sleep := time.Duration(10) * time.Second
 
 	for retry {
-		log.Printf("call %v with %v %v as of %v\n", endpoint, method, req.Query, req.AsOfBlock)
+		log.Printf("call %v", req)
 
-		response, err := client.Call(context.Background(), method, params)
+		response, err := client.Call(context.Background(), req.method, params)
 
 		// log.Printf("response %v", response)
 
@@ -117,13 +117,13 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 			switch e := err.(type) {
 			case *rpc.HTTPError:
 				if e.Code == 429 {
-					log.Printf("sleeping for %v then retrying after Call failed with too many requests HTTPError=%v\n", sleep, err)
+					log.Printf("sleeping for %v then retrying after Call failed with too many requests HTTPError=%v", sleep, err)
 					time.Sleep(sleep)
 				} else if e.Code == 503 || e.Code == 504 {
-					log.Printf("sleeping for %v then retrying after Call failed with server overloaded HTTPError=%v\n", sleep, err)
+					log.Printf("sleeping for %v then retrying after Call failed with server overloaded HTTPError=%v", sleep, err)
 					time.Sleep(sleep)
 				} else {
-					log.Printf("retrying after Call failed with HTTPError=%v\n", err)
+					log.Printf("retrying after Call failed with HTTPError=%v", err)
 				}
 			default:
 				log.Printf("sleeping for %v then retrying after Call failed with err=%v\n", sleep, err)
@@ -135,21 +135,21 @@ func query(method string, endpoint string, dataSourceName string, req Request, r
 		} else if response.Error != nil {
 			if response.Error.Code == -32602 {
 				retry = false
-				log.Printf("not retrying after Call failed with response.Error %v\n", response.Error)
+				log.Printf("not retrying after Call failed with response.Error %v", response.Error)
 			} else {
 				log.Fatalf("exiting after Call failed with unhandled response.Error %v", response.Error)
 			}
 		} else {
 			retry = false
 
-			err := response.GetObject(&res)
+			err := response.GetObject(&res.persistent)
 			if err != nil {
 				log.Fatalf("cannot GetObject %v\n", err)
 			}
 
-			log.Printf("%v responded with %v records", method, res.Len())
+			log.Printf("%v responded with %v records", req.method, res.persistent.Len())
 
-			res.Save(dataSourceName, req)
+			res.persistent.Save(res.dataSourceName, req)
 		}
 	}
 }
@@ -172,7 +172,7 @@ func getDatabaseBlockNumber(dataSourceName string) (blockNumber uint64) {
 func getNetworkBlockNumber(endpoint string) uint64 {
 	getBlockNumberResponse := NewGetBlockNumberResponse()
 
-	query("eth_blockNumber", endpoint, "", Request{0, nil}, getBlockNumberResponse)
+	call(RpcRequest{0, nil, "eth_blockNumber", endpoint}, RpcResponse{getBlockNumberResponse, ""})
 
 	return getBlockNumberResponse.ToNumber()
 }
@@ -214,12 +214,12 @@ func main() {
 
 		log.Printf("query for logs in blocks from %v to %v", fromBlock, toBlock)
 
-		query("eth_getLogs", endpoint, dataSourceName, Request{0, NewGetLogsRequest(contracts, fromBlock, toBlock)}, NewGetLogsResponse())
+		call(RpcRequest{0, NewGetLogsRequest(contracts, fromBlock, toBlock), "eth_getLogs", endpoint}, RpcResponse{NewGetLogsResponse(), dataSourceName})
 
 		for _, token := range tokens {
 			log.Printf("query for price of %v as of block %v", token, fromBlock)
 
-			query("eth_call", endpoint, dataSourceName, Request{fromBlock, NewGetPriceRequest(token)}, NewGetPriceResponse())
+			call(RpcRequest{fromBlock, NewGetPriceRequest(token), "eth_call", endpoint}, RpcResponse{NewGetPriceResponse(), dataSourceName})
 		}
 
 		// progress to the block right after the window specified by block step

@@ -13,6 +13,6 @@ req="{ \"jsonrpc\":\"2.0\", \"method\":\"eth_call\",\"id\":1,\"params\": [{\"to\
 
 echo $req | jq
 
-curl --silent --insecure $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq
+# curl --silent --insecure $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq
 
-# curl --silent --insecure $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq -r .result | xargs printf '%d\n'
+curl --silent --insecure $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq -r .result | xargs printf '%d\n'

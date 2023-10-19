@@ -8,13 +8,20 @@ import (
 )
 
 type Persistent interface {
-	Save(dataSourceName string, req Request) (countSaved int64)
+	Save(dataSourceName string, req RpcRequest) (countSaved int64)
 	Len() int
 }
 
-type Request struct {
+type RpcRequest struct {
 	AsOfBlock uint64
 	Query     interface{}
+	method    string
+	endpoint  string
+}
+
+type RpcResponse struct {
+	persistent     Persistent
+	dataSourceName string
 }
 
 func FromHex(hex string) (value uint64) {

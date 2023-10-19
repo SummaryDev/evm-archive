@@ -78,7 +78,7 @@ func (t *GetPriceResponse) ToNumber() uint64 {
 	return FromHex(s)
 }
 
-func (t *GetPriceResponse) Save(dataSourceName string, req Request) (countSaved int64) {
+func (t *GetPriceResponse) Save(dataSourceName string, req RpcRequest) (countSaved int64) {
 	if t.Len() == 0 {
 		log.Println("no price in the response")
 		return

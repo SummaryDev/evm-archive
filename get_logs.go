@@ -79,18 +79,18 @@ func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *Ge
 	return q
 }
 
+type GetLogsResponse []LogRpc
+
 func NewGetLogsResponse() *GetLogsResponse {
 	return &GetLogsResponse{}
 }
-
-type GetLogsResponse []LogRpc
 
 func (t *GetLogsResponse) Len() int {
 	logs := *t
 	return len(logs)
 }
 
-func (t *GetLogsResponse) Save(dataSourceName string, req Request) (countSaved int64) {
+func (t *GetLogsResponse) Save(dataSourceName string, req RpcRequest) (countSaved int64) {
 	logs := *t
 
 	if len(logs) == 0 {

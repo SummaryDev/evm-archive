@@ -11,4 +11,4 @@ req="{ \"jsonrpc\":\"2.0\", \"method\":\"eth_getLogs\",\"id\":1,\"params\": [{\"
 
 echo $req | jq
 
-curl $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq
+curl --silent --insecure $rpc -X POST -H "Content-Type: application/json" --data "$req" | jq

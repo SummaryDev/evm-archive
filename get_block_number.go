@@ -21,6 +21,6 @@ func (t *GetBlockNumberResponse) ToNumber() uint64 {
 	return FromHex(s)
 }
 
-func (t *GetBlockNumberResponse) Save(dataSourceName string, req Request) (countSaved int64) {
+func (t *GetBlockNumberResponse) Save(dataSourceName string, req RpcRequest) (countSaved int64) {
 	return
 }
