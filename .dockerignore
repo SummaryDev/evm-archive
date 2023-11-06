@@ -4,3 +4,4 @@ data
 evm-archive
 postgres-data
 *ndjson
+*.bak

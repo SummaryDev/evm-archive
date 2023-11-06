@@ -53,7 +53,7 @@ func NewLogDb(r LogRpc) (d LogDb) {
 }
 
 type GetLogsRequest struct {
-	Address   string `json:"address,omitempty"`
+	Address   []string `json:"address,omitempty"`
 	FromBlock string `json:"fromBlock,omitempty"`
 	ToBlock   string `json:"toBlock,omitempty"`
 }
@@ -67,7 +67,7 @@ func (t *GetLogsRequest) ToJson() (s string) {
 func NewGetLogsRequest(contracts []string, fromBlock uint64, toBlock uint64) *GetLogsRequest {
 	q := &GetLogsRequest{}
 	if len(contracts) > 0 {
-		q.Address = contracts[0]
+		q.Address = contracts
 	}
 	if fromBlock > 0 {
 		q.FromBlock = ToHex(fromBlock)
