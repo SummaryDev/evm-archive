@@ -26,7 +26,7 @@ type LogDb struct {
 	Topic1           string
 	Topic2           string
 	Topic3           string
-	Data             string
+	Data             *string
 	BlockHash        string
 	BlockNumber      uint64
 	TransactionHash  string
@@ -41,7 +41,9 @@ func NewLogDb(r LogRpc) (d LogDb) {
 	d.Topic1 = r.Topics[1]
 	d.Topic2 = r.Topics[2]
 	d.Topic3 = r.Topics[3]
-	d.Data = r.Data
+	if r.Data != "0x" && r.Data != "" {
+		d.Data = &r.Data
+	}
 	d.BlockHash = r.BlockHash
 	d.BlockNumber = FromHex(r.BlockNumber)
 	d.TransactionHash = r.TransactionHash
@@ -54,8 +56,8 @@ func NewLogDb(r LogRpc) (d LogDb) {
 
 type GetLogsRequest struct {
 	Address   []string `json:"address,omitempty"`
-	FromBlock string `json:"fromBlock,omitempty"`
-	ToBlock   string `json:"toBlock,omitempty"`
+	FromBlock string   `json:"fromBlock,omitempty"`
+	ToBlock   string   `json:"toBlock,omitempty"`
 }
 
 func (t *GetLogsRequest) ToJson() (s string) {
