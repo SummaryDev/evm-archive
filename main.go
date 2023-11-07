@@ -15,7 +15,7 @@ import (
 	rpc "github.com/ybbus/jsonrpc/v3"
 )
 
-func getArgs() (endpoint string, dataSourceName string, contracts []string, tokens []string, fromBlock uint64, toBlock uint64, blockStep uint64, sleepSeconds uint64) {
+func getArgs() (endpoint string, dataSourceName string, contracts []string, tokens []string, oracles []string, fromBlock uint64, toBlock uint64, blockStep uint64, sleepSeconds uint64) {
 
 	endpoint = os.Getenv("EVM_ARCHIVE_ENDPOINT")
 	if endpoint == "" {
@@ -40,6 +40,11 @@ func getArgs() (endpoint string, dataSourceName string, contracts []string, toke
 	tokenString := os.Getenv("EVM_ARCHIVE_TOKENS")
 	if tokenString != "" {
 		tokens = strings.Split(tokenString, ",")
+	}
+
+	oracleString := os.Getenv("EVM_ARCHIVE_ORACLES")
+	if oracleString != "" {
+		oracles = strings.Split(oracleString, ",")
 	}
 
 	var err error
@@ -183,16 +188,17 @@ func getLogs(contracts []string, fromBlock uint64, toBlock uint64, endpoint stri
 	call(RpcRequest{0, NewGetLogsRequest(contracts, fromBlock, toBlock), "eth_getLogs", endpoint}, RpcResponse{NewGetLogsResponse(), dataSourceName})
 }
 
-func getPrices(tokens []string, fromBlock uint64, endpoint string, dataSourceName string) {
-	for _, token := range tokens {
-		log.Printf("query for price of %v as of block %v", token, fromBlock)
+func getPrices(tokens []string, oracles []string, fromBlock uint64, endpoint string, dataSourceName string) {
+	for i, token := range tokens {
+		oracle := oracles[i]
+		log.Printf("query for price of token %v from oracle %v as of block %v", token, oracle, fromBlock)
 
-		call(RpcRequest{fromBlock, NewGetPriceRequest(token), "eth_call", endpoint}, RpcResponse{NewGetPriceResponse(), dataSourceName})
+		call(RpcRequest{fromBlock, NewGetPriceRequest(token, oracle), "eth_call", endpoint}, RpcResponse{NewGetPriceResponse(), dataSourceName})
 	}
 }
 
 func main() {
-	endpoint, dataSourceName, contracts, tokens, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
+	endpoint, dataSourceName, contracts, tokens, oracles, fromBlockArg, toBlockArg, blockStep, sleepSeconds := getArgs()
 
 	sleep := time.Duration(sleepSeconds) * time.Second
 
@@ -228,7 +234,7 @@ func main() {
 
 		getLogs(contracts, fromBlock, toBlock, endpoint, dataSourceName)
 
-		getPrices(tokens, fromBlock, endpoint, dataSourceName)
+		getPrices(tokens, oracles, fromBlock, endpoint, dataSourceName)
 
 		// progress to the block right after the window specified by block step
 		fromBlock = toBlock + 1

@@ -29,8 +29,9 @@ func NewPriceDb(r PriceRpc) (d PriceDb) {
 }
 
 type GetPriceRequest struct {
-	To   string `json:"to,omitempty"`
-	Data string `json:"data,omitempty"`
+	To    string `json:"to,omitempty"`
+	Data  string `json:"data,omitempty"`
+	Token string
 }
 
 func (t *GetPriceRequest) ToJson() (s string) {
@@ -39,21 +40,12 @@ func (t *GetPriceRequest) ToJson() (s string) {
 	return
 }
 
-var oracles = map[string]string{
-	"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c", // WBTC
-	"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419", // WETH
-}
-
-var tokens = map[string]string{
-	"0xf4030086522a5beea4988f8ca5b36dbc97bee88c": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-	"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-}
-
-func NewGetPriceRequest(token string) *GetPriceRequest {
+func NewGetPriceRequest(token string, oracle string) *GetPriceRequest {
 	q := &GetPriceRequest{}
-	q.To = oracles[token]
+	q.To = oracle
 	q.Data = "0x50d25bcd" // latestAnswer encoded as function selector
-	log.Printf("from %v with %v", token, q.ToJson())
+	q.Token = token
+	log.Printf("for token %v from oracle %v with %v", token, oracle, q.ToJson())
 	return q
 }
 
@@ -91,7 +83,7 @@ func (t *GetPriceResponse) Save(dataSourceName string, req RpcRequest) (countSav
 
 	price := t.ToNumber()
 	blockNumber := req.AsOfBlock
-	token := tokens[getPriceRequest.To]
+	token := getPriceRequest.Token
 
 	priceDb := PriceDb{Address: token, BlockNumber: blockNumber, Price: price}
 
@@ -101,9 +93,7 @@ func (t *GetPriceResponse) Save(dataSourceName string, req RpcRequest) (countSav
 	}
 	defer db.Close()
 
-	insertQuery := "insert into price (address, block_number, price) " +
-		"values (:address, :blocknumber, :price) " +
-		"on conflict on constraint price_pkey do nothing" //todo on conflict on constraint price_pkey update
+	insertQuery := "insert into price (address, block_number, price) values (:address, :blocknumber, :price) on conflict on constraint price_pkey do nothing" //todo on conflict on constraint price_pkey update
 
 	result, err := db.NamedExec(insertQuery, priceDb)
 	if err != nil {

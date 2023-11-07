@@ -9,7 +9,7 @@ func NewGetBlockNumberResponse() *GetBlockNumberResponse {
 
 func (t *GetBlockNumberResponse) Len() int {
 	blocknumber := *t
-	if len(blocknumber) >= 9 {
+	if len(blocknumber) >= 2 {
 		return 1
 	} else {
 		return 0
