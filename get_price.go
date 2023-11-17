@@ -31,7 +31,7 @@ func NewPriceDb(r PriceRpc) (d PriceDb) {
 type GetPriceRequest struct {
 	To    string `json:"to,omitempty"`
 	Data  string `json:"data,omitempty"`
-	Token string
+	Token string `json:"-"`
 }
 
 func (t *GetPriceRequest) ToJson() (s string) {
